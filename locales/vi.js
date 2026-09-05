@@ -41,5 +41,12 @@ export const vi = {
     history: 'Lịch sử phân tích',
     noData: 'Chưa có dữ liệu. Hãy quét bài để bắt đầu!',
     backToScan: 'Quay lại quét bài'
+  },
+  nav: {
+    scanner: 'Quét bài',
+    coach: 'Trợ lý AI',
+    dashboard: 'Bảng điểm',
+    submitCase: 'Đóng góp Case',  // Thêm dòng này
+    admin: 'Quản trị'             // Thêm dòng này
   }
 };

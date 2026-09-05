@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useLanguage } from '@/context/LanguageContext';
 import { useRecordWebcam } from 'react-record-webcam';
@@ -8,6 +8,7 @@ export default function ScanPage() {
   const { t } = useLanguage();
   const [cases, setCases] = useState([]);
   const [selectedCase, setSelectedCase] = useState('');
+  const [scanMode, setScanMode] = useState('case'); // 'case' hoặc 'free'
   const [news, setNews] = useState('');
   const [reason, setReason] = useState('');
   const [studentId, setStudentId] = useState('');
@@ -98,7 +99,6 @@ export default function ScanPage() {
     if (blob) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Bỏ phần "data:image/jpeg;base64," ở đầu
         const base64 = reader.result.split(',')[1];
         setImageBase64(base64);
         alert("Đã chụp ảnh thành công!");
@@ -112,17 +112,27 @@ export default function ScanPage() {
       alert("Vui lòng đăng nhập trước khi phân tích!");
       return;
     }
+    
+    // Nếu là quét tự do mà không có nội dung, báo lỗi
+    if (scanMode === 'free' && !news && !imageBase64) {
+      alert("Vui lòng dán nội dung hoặc chụp ảnh bài viết!");
+      return;
+    }
+
     setLoading(true);
     try {
+      // Nếu là quét tự do, caseId sẽ là rỗng
+      const finalCaseId = scanMode === 'free' ? null : selectedCase;
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           studentId, 
-          caseId: selectedCase,
+          caseId: finalCaseId,
           newsContext: news, 
           studentInput: reason,
-          imageBase64: imageBase64 // Gửi kèm ảnh
+          imageBase64: imageBase64
         })
       });
 
@@ -216,21 +226,40 @@ export default function ScanPage() {
         {/* Form Analyze chỉ hiện khi đã đăng nhập */}
         {isLoggedIn && (
           <>
+            {/* Nút chuyển chế độ */}
+            <div className="flex gap-2 bg-gray-100 p-2 rounded-lg">
+              <button 
+                onClick={() => { setScanMode('case'); setNews(cases[0]?.bait_context || ''); }}
+                className={`flex-1 py-3 rounded-lg font-bold transition ${scanMode === 'case' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'}`}
+              >
+                Chơi theo Case
+              </button>
+              <button 
+                onClick={() => { setScanMode('free'); setNews(''); }}
+                className={`flex-1 py-3 rounded-lg font-bold transition ${scanMode === 'free' ? 'bg-green-600 text-white' : 'bg-white text-gray-700'}`}
+              >
+                Quét tự do (Mạng xã hội)
+              </button>
+            </div>
+
             <div className="space-y-4 bg-white p-6 rounded-xl border shadow-sm">
-              <div>
-                <label className="block font-bold mb-1">{t.scan.selectCase}</label>
-                <select 
-                  className="w-full p-3 border rounded-lg bg-gray-50 font-medium"
-                  value={selectedCase}
-                  onChange={handleSelectCase}
-                >
-                  {cases.map((c) => (
-                    <option key={c.case_id} value={c.case_id}>
-                      [{c.case_id}] {c.title || c.bait_context?.substring(0, 50)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Chỉ hiện dropdown khi chọn Case */}
+              {scanMode === 'case' && (
+                <div>
+                  <label className="block font-bold mb-1">{t.scan.selectCase}</label>
+                  <select 
+                    className="w-full p-3 border rounded-lg bg-gray-50 font-medium"
+                    value={selectedCase}
+                    onChange={handleSelectCase}
+                  >
+                    {cases.map((c) => (
+                      <option key={c.case_id} value={c.case_id}>
+                        [{c.case_id}] {c.title || c.bait_context?.substring(0, 50)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* PHẦN QUÉT ẢNH BẰNG CAMERA */}
               <div className="border-t pt-4 mt-4">
@@ -264,7 +293,6 @@ export default function ScanPage() {
                   </div>
                 )}
                 
-                {/* Hiển thị ảnh đã chụp */}
                 {imageBase64 && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                     <p className="text-green-800 font-bold mb-2">Đã chụp ảnh thành công!</p>
@@ -279,12 +307,15 @@ export default function ScanPage() {
               </div>
 
               <div>
-                <label className="block font-bold mb-1">{t.scan.context}</label>
+                <label className="block font-bold mb-1">
+                  {scanMode === 'free' ? 'Nội dung bài viết / Dán Link hoặc Text:' : t.scan.context}
+                </label>
                 <textarea 
                   className="w-full p-3 border rounded-lg bg-gray-50" 
-                  rows="3" 
+                  rows="4" 
                   value={news}
                   onChange={(e) => setNews(e.target.value)}
+                  placeholder={scanMode === 'free' ? "Dán nội dung bài viết hoặc link bạn thấy trên Facebook/TikTok vào đây..." : ""}
                 />
               </div>
 
@@ -301,14 +332,14 @@ export default function ScanPage() {
 
               <button 
                 onClick={handleScan} 
-                disabled={loading || !news || !reason}
+                disabled={loading || !reason}
                 className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition"
               >
                 {loading ? t.scan.analyzing : t.scan.analyze}
               </button>
             </div>
 
-            {/* Phần hiển thị kết quả (giữ nguyên) */}
+            {/* Phần hiển thị kết quả */}
             {result && (
               <div className="bg-slate-50 border-2 border-blue-200 p-6 rounded-xl space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">

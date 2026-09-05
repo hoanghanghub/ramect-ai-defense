@@ -41,5 +41,12 @@ export const en = {
     history: 'Analysis History',
     noData: 'No data yet. Start scanning to begin!',
     backToScan: 'Back to Scan'
+  },
+  nav: {
+    scanner: 'Scanner',
+    coach: 'Coach',
+    dashboard: 'Dashboard',
+    submitCase: 'Submit Case',    // Thêm dòng này
+    admin: 'Admin'                // Thêm dòng này
   }
 };

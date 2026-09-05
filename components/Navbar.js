@@ -12,6 +12,11 @@ export default function Navbar() {
           <Link href="/scan" className="hover:underline">{t.nav.scanner}</Link>
           <Link href="/coach" className="hover:underline">{t.nav.coach}</Link>
           <Link href="/dashboard" className="hover:underline">{t.nav.dashboard}</Link>
+          
+          {/* Thêm 2 nút mới */}
+          <Link href="/submit-case" className="hover:underline">{t.nav.submitCase}</Link>
+          <Link href="/admin" className="hover:underline">{t.nav.admin}</Link>
+          
           <LanguageSwitcher />
         </div>
       </div>
